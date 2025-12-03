@@ -57,7 +57,7 @@ export function PDFReader({
       if (pdfSpans.length === 0) {
         if (attempt < maxAttempts) {
           console.log(`⏳ Attempt ${attempt}/${maxAttempts}: Waiting for PDF text layer...`);
-          setTimeout(() => attemptHighlight(attempt + 1, maxAttempts), 100 * attempt);
+          // setTimeout(() => attemptHighlight(attempt + 1, maxAttempts), 100 * attempt);
         } else {
           console.log('❌ No PDF spans found after multiple attempts');
         }
@@ -81,7 +81,7 @@ export function PDFReader({
       // Strategy 1: Try exact normalized match
       if (normalizedPageText.includes(normalizedSearchText)) {
         console.log('✅ Found exact normalized match!');
-        highlightExactMatch(pdfSpans, normalizedPageText, normalizedSearchText);
+        // highlightExactMatch(pdfSpans, normalizedPageText, normalizedSearchText);
         return;
       }
 
@@ -91,7 +91,7 @@ export function PDFReader({
         const partialSearch = searchWords.slice(0, wordCount).join(' ');
         if (normalizedPageText.includes(partialSearch)) {
           console.log(`✅ Found ${wordCount}-word match!`);
-          highlightPartialMatch(pdfSpans, partialSearch);
+          // highlightPartialMatch(pdfSpans, partialSearch);
           return;
         }
       }
@@ -172,7 +172,7 @@ export function PDFReader({
     };
 
     // Start highlighting with retry logic
-    attemptHighlight();
+    // attemptHighlight();
   }, [searchText, pageNumber]);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
@@ -187,7 +187,7 @@ export function PDFReader({
       setPageNumber(highlightedPage);
 
       // Apply highlighting after page loads
-      setTimeout(highlightSearchText, 100);
+      // setTimeout(highlightSearchText, 100);
     }
   }
 
@@ -240,13 +240,13 @@ export function PDFReader({
   }, [highlightedPage, numPages]);
 
   // Apply highlighting when searchText changes
-  React.useEffect(() => {
-    if (searchText && numPages > 0) {
-      // Quick delay to ensure text layers are rendered
-      const timeoutId = setTimeout(highlightSearchText, 200);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [searchText, numPages, highlightSearchText]);
+  // React.useEffect(() => {
+  //   if (searchText && numPages > 0) {
+  //     // Quick delay to ensure text layers are rendered
+  //     const timeoutId = setTimeout(highlightSearchText, 200);
+  //     return () => clearTimeout(timeoutId);
+  //   }
+  // }, [searchText, numPages, highlightSearchText]);
 
   if (error) {
     return (
@@ -365,7 +365,7 @@ export function PDFReader({
                   onRenderSuccess={() => {
                     console.log('📄 Page rendered:', pageNumber);
                     // Apply highlighting immediately after page renders
-                    setTimeout(highlightSearchText, 50);
+                    // setTimeout(highlightSearchText, 50);
                   }}
                 />
               </div>

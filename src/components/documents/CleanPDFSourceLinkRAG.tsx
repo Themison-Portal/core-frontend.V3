@@ -18,7 +18,7 @@ interface CleanPDFSourceLinkProps {
   documentUrl?: string;
   documentName?: string;
   className?: string;
-  onNavigatePDF?: (page: number, searchText: string) => void;
+  onNavigatePDF?: (page: number, searchText: string, sourceName?: string) => void;
 }
 
 export function CleanPDFSourceLinkRAG({
@@ -34,7 +34,7 @@ export function CleanPDFSourceLinkRAG({
     if (onNavigatePDF) {
       // Use the callback to open PDF drawer with highlighting
       console.log('🔗 Opening PDF drawer for source:', { page: source.page, text: source.exactText?.substring(0, 50) });
-      onNavigatePDF(source.page, source.exactText || '');
+      onNavigatePDF(source.page, source.exactText || '', source.name+'.pdf');
     } else {
       // Fallback to opening in new tab
       const targetUrl = source.highlightURL || (documentUrl ? `${documentUrl}#page=${source.page}` : null);
@@ -60,7 +60,7 @@ export function CleanPDFSourceLinkRAG({
         <div className="flex items-center gap-2">
           <FileText className="w-4 h-4 text-gray-600" />
           <span className="font-medium text-gray-900">
-            {`${source.name ? `${source.name} - ` : ""}${source.section || `Page ${source.page}`}`}
+            {`${source.name ? `${source.name} - ` : ""}${source.section} Page ${source.page}`}
           </span>
           {source.relevance && (
             <Badge variant={getRelevanceBadgeVariant(source.relevance)} className="text-xs">
@@ -108,7 +108,7 @@ interface CleanPDFSourcesPanelProps {
   documentUrl?: string;
   documentName?: string;
   className?: string;
-  onNavigatePDF?: (page: number, searchText: string) => void;
+  onNavigatePDF?: (page: number, searchText: string, sourceName?: string) => void;
 }
 
 export function CleanPDFSourcesPanelRAG({
@@ -164,7 +164,8 @@ export function CleanPDFSourcesPanelRAG({
               context: source.context,
               highlightURL: source.highlightURL
             }}
-            documentUrl={documentUrl}
+            // documentUrl={documentUrl}
+            documentUrl={source.filename ? documentUrl : documentUrl}
             documentName={documentName}
             onNavigatePDF={onNavigatePDF}
           />

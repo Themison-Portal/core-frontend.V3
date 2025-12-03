@@ -93,6 +93,7 @@ export function DocumentRag({ trial }: DocumentAIProps) {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [documentId, setDocumentId] = useState<string | null>(null);
     const [chat, setChat] = useState<ChatMessage[]>([]);
+    const [pdfUrl, setPdfUrl] = useState<string>('');
     const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
         null
     );
@@ -153,6 +154,8 @@ export function DocumentRag({ trial }: DocumentAIProps) {
     const latestProtocol = activeDocuments.find(
         (doc) => doc.document_type === "protocol"
     );
+
+    const BACKEND_URL = import.meta.env.VITE_API_BASE_URL; 
 
     // Parse documentId from URL or use latest protocol as default
     useEffect(() => {
@@ -240,7 +243,7 @@ export function DocumentRag({ trial }: DocumentAIProps) {
 
 
         try {
-            console.log("Sending user message to RAG:");
+            
             const data = await callRag(userMessage);
 
             const botMsg: ChatMessage = {
@@ -268,11 +271,11 @@ export function DocumentRag({ trial }: DocumentAIProps) {
     };
 
     const callRag = async (query: string): Promise<RagResponse> => {
-        console.log("Calling RAG with query:", query);
+        
         const fd = new FormData();
         fd.append("query", query);
-        const API_BASE = import.meta.env.VITE_API_BASE_URL;
-        const res = await fetch(`${API_BASE}/rag/query`, {
+        
+        const res = await fetch(`${BACKEND_URL}/rag/query`, {
             method: "POST",
             body: fd,
         });
@@ -766,7 +769,9 @@ export function DocumentRag({ trial }: DocumentAIProps) {
                                                         sources={msg.sources}
                                                         documentUrl={document?.document_url || document?.file_url}
                                                         documentName={document?.document_name || 'Protocol Document'}
-                                                        onNavigatePDF={(page, searchText) => {
+                                                        onNavigatePDF={(page, searchText, sourceName) => {
+                                                            const fileUrl = `${BACKEND_URL}/rag/highlighted_pdf?doc=${encodeURIComponent(sourceName)}&page=${page}&highlight=${encodeURIComponent(searchText)}`;
+                                                            setPdfUrl(fileUrl);
                                                             setPdfHighlightPage(page);
                                                             setPdfSearchText(searchText);
                                                             setShowPDFDrawer(true);
@@ -1026,7 +1031,7 @@ export function DocumentRag({ trial }: DocumentAIProps) {
                 <DocumentPDFDrawer
                     isOpen={showPDFDrawer}
                     onClose={() => setShowPDFDrawer(false)}
-                    documentUrl={document.document_url || document.file_url || ''}
+                    documentUrl={pdfUrl || ''}
                     documentName={document.document_name || 'Document'}
                     highlightedPage={pdfHighlightPage}
                     searchText={pdfSearchText}

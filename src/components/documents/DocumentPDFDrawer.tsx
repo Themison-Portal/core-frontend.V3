@@ -26,6 +26,7 @@ export function DocumentPDFDrawer({
   highlightedPage,
   searchText,
 }: DocumentPDFDrawerProps) {
+  console.log('📄 Opening PDF Drawer:', { documentUrl });
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent
