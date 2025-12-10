@@ -15,6 +15,8 @@ export function DocumentAssistantTabs({
     { id: "document-ai", label: "Document AI", icon: FileText },
     { id: "qa-repository", label: "QA Repository", icon: MessageSquare },
     { id: "rag", label: "RAG", icon: Brain },
+    { id: "rag-biobert", label: "RAG-BioBERT", icon: Brain },
+
   ];
 
   return (

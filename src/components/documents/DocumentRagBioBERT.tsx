@@ -84,7 +84,7 @@ interface ChatMessage {
   streamedContent?: string;
 }
 
-export function DocumentRag({ trial }: DocumentAIProps) {
+export function DocumentRagBioBERT({ trial }: DocumentAIProps) {
     const location = useLocation();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -274,24 +274,30 @@ export function DocumentRag({ trial }: DocumentAIProps) {
         
         const fd = new FormData();
         fd.append("query", query);
+
+        try {
         
-        const res = await fetch(`${BACKEND_URL}/rag/query`, {
-            method: "POST",
-            body: fd,
-        });
+            const res = await fetch(`${BACKEND_URL}/rag/query-biobert`, {
+                method: "POST",
+                body: fd,
+            });
 
-        if (!res.ok) {
-            const text = await res.text();
-            throw new Error(`RAG request failed: ${res.status} ${text}`);
+            if (!res.ok) {
+                const text = await res.text();
+                console.error("RAG-BioBERT request failed:", res.status, text);
+                throw new Error(`RAG-BioBERT request failed: ${res.status} ${text}`);
+            }
+
+            const data = await res.json();
+            // Ensure shape
+            return {
+                response: typeof data.response === "string" ? data.response : "",
+                sources: Array.isArray(data.sources) ? data.sources : [],
+                tool_calls: Array.isArray(data.tool_calls) ? data.tool_calls : [],
+            };
+        } catch (err) {
+            console.error("Fetch failed:", err);
         }
-
-        const data = await res.json();
-        // Ensure shape
-        return {
-            response: typeof data.response === "string" ? data.response : "",
-            sources: Array.isArray(data.sources) ? data.sources : [],
-            tool_calls: Array.isArray(data.tool_calls) ? data.tool_calls : [],
-        };
     };
 
     const formatRagResponse = (data: RagResponse) => {
@@ -692,7 +698,7 @@ export function DocumentRag({ trial }: DocumentAIProps) {
                                         <BookOpen className="w-6 h-6 text-slate-600" />
                                     </div>
                                     <h3 className="text-xl font-semibold text-slate-800 tracking-tight">
-                                        Document AI Assistant RAG
+                                        Document AI Assistant BioBERT
                                     </h3>
                                     <p className="text-slate-500 text-sm leading-relaxed">
                                         Ask questions about your protocol documents and get

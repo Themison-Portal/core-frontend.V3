@@ -13,6 +13,7 @@ import { MessageSquare } from "lucide-react";
 import type { BreadcrumbItem } from "@/components/ui/breadcrumb";
 import { TrialDropdownBreadcrumb } from "@/components/common/breadcrumbs/TrialDropdownBreadcrumb";
 import { DocumentRag } from "@/components/documents/DocumentRag";
+import { DocumentRagBioBERT } from "@/components/documents/DocumentRagBioBERT";
 
 const tabNames: Record<string, string> = {
   "document-ai": "Document AI",
@@ -20,6 +21,7 @@ const tabNames: Record<string, string> = {
   "qa-repository": "QA Repository",
   "select-trial": "Select Trial",
   "rag": "RAG",
+  "rag-biobert": "RAG-BioBERT",
 };
 
 export default function DocumentAssistantPage() {
@@ -155,6 +157,8 @@ function DocumentAssistantContent({
       return <QARepository trial={trial} />;
     case "rag":
       return <DocumentRag trial={trial} />;
+    case "rag-biobert":
+      return <DocumentRagBioBERT trial={trial} />;
     default:
       return <ActiveDocuments trial={trial} />;
   }
