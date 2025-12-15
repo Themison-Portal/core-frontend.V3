@@ -41,9 +41,9 @@ import { PDFTestButton } from "./PDFTestButton";
 import { CleanPDFSourcesPanelRAG } from "./CleanPDFSourceLinkRAG";
 
 type RagResponse = {
-  response: string;
-  sources?: ChatMessage['sources'];
-  tool_calls?: any[];
+    response: string;
+    sources?: ChatMessage['sources'];
+    tool_calls?: any[];
 };
 
 interface DocumentAIProps {
@@ -51,40 +51,41 @@ interface DocumentAIProps {
         id: string;
         name: string;
     };
+    document_id?: string;
 }
 
 interface ChatMessage {
-  id: string;
-  role: "user" | "llm";
-  content: string; // plain markdown string
-  sources?: Array<{
-    section: string;
-    page?: number;
-    content: string;
-    exactText?: string;
-    relevance?: "high" | "medium" | "low";
-    context?: string;
-    highlightURL?: string;
-    filename?: string;
-    chunk_index?: number;
-  }>;
-  downloadableTemplates?: Array<{
-    title: string;
-    type: "worksheet" | "checklist" | "report";
-    filename: string;
-  }>;
-  quickActions?: Array<{
-    title: string;
-    icon: string;
-    action: string;
-    type: "download" | "generate" | "setup";
-  }>;
-  tool_calls?: any[]; // raw tool calls from backend (kept for debugging or mapping)
-  isStreaming?: boolean;
-  streamedContent?: string;
+    id: string;
+    role: "user" | "llm";
+    content: string; // plain markdown string
+    sources?: Array<{
+        section: string;
+        page?: number;
+        content: string;
+        exactText?: string;
+        relevance?: "high" | "medium" | "low";
+        context?: string;
+        highlightURL?: string;
+        filename?: string;
+        chunk_index?: number;
+    }>;
+    downloadableTemplates?: Array<{
+        title: string;
+        type: "worksheet" | "checklist" | "report";
+        filename: string;
+    }>;
+    quickActions?: Array<{
+        title: string;
+        icon: string;
+        action: string;
+        type: "download" | "generate" | "setup";
+    }>;
+    tool_calls?: any[]; // raw tool calls from backend (kept for debugging or mapping)
+    isStreaming?: boolean;
+    streamedContent?: string;
 }
 
-export function DocumentRag({ trial }: DocumentAIProps) {
+export function DocumentRag({ trial, document_id }: DocumentAIProps) {
     const location = useLocation();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -155,7 +156,7 @@ export function DocumentRag({ trial }: DocumentAIProps) {
         (doc) => doc.document_type === "protocol"
     );
 
-    const BACKEND_URL = import.meta.env.VITE_API_BASE_URL; 
+    const BACKEND_URL = import.meta.env.VITE_API_BASE_URL;
 
     // Parse documentId from URL or use latest protocol as default
     useEffect(() => {
@@ -243,7 +244,7 @@ export function DocumentRag({ trial }: DocumentAIProps) {
 
 
         try {
-            
+
             const data = await callRag(userMessage);
 
             const botMsg: ChatMessage = {
@@ -271,11 +272,14 @@ export function DocumentRag({ trial }: DocumentAIProps) {
     };
 
     const callRag = async (query: string): Promise<RagResponse> => {
-        
+
         const fd = new FormData();
         fd.append("query", query);
-        
-        const res = await fetch(`${BACKEND_URL}/rag/query`, {
+        if (document_id) {
+            console.log('document_id: ', document_id)
+            fd.append("document_id", document_id);
+        }
+        const res = await fetch(`${BACKEND_URL}/rag/query-docling`, {
             method: "POST",
             body: fd,
         });

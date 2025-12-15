@@ -102,7 +102,8 @@ export function TrialOverview({ trial }: TrialOverviewProps) {
           onClick={() => {
             if (protocolDocument) {
               navigate(
-                `/document-assistant/${trial.id}/document-ai?documentId=${protocolDocument.id}`
+                // `/document-assistant/${trial.id}/document-ai?documentId=${protocolDocument.id}`
+                `/document-assistant/${trial.id}/rag`
               );
             }
           }}

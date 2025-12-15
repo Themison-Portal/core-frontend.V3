@@ -38,7 +38,7 @@ export const AppSidebar = () => {
     },
     {
       name: "Document Assistant",
-      href: "/document-assistant/select-trial",
+      href: "/document-assistant/select-trial",      
       icon: MessageSquare,
       current: location.pathname.startsWith("/document-assistant"),
     },
