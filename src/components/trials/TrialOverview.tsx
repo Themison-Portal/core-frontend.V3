@@ -14,21 +14,82 @@ import {
   Upload,
 } from "lucide-react";
 import { useTrialDocuments } from "@/hooks/useDocuments";
+import { useUpdateTrial } from "@/hooks/useTrials";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { TrialBreadcrumb } from "@/components/common/breadcrumbs/TrialBreadcrumb";
+import { toast } from "@/hooks/use-toast";
+// import { TrialBreadcrumb } from "@/components/common/breadcrumbs/TrialBreadcrumb";
 
 interface TrialOverviewProps {
   trial: any;
 }
 
-export function TrialOverview({ trial }: TrialOverviewProps) {
+type TrialStatus = "planning" | "active" | "completed" | "paused" | "cancelled";
+
+const statusTransitions: Record<TrialStatus, { label: string; nextStatus?: TrialStatus }> = {
+  planning: { label: "Start Trial", nextStatus: "active" },
+  active: { label: "Pause Trial", nextStatus: "paused" },
+  paused: { label: "Resume Trial", nextStatus: "active" },
+  completed: { label: "Mark as Completed" },
+  cancelled: { label: "Cancelled" },
+};
+
+export function TrialOverview({ trial: initialTrial }: TrialOverviewProps) {
   const navigate = useNavigate();
+  const updateTrial = useUpdateTrial();
+
+  // Fetch the latest trial data from the cache/DB
+  // This ensures that when 'updateTrial' changes the cache, THIS component re-renders
+  const { data: currentTrial } = useQuery({
+    queryKey: ["trials", "detail", initialTrial.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("trials")
+        .select("*")
+        .eq("id", initialTrial.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    initialData: initialTrial, // Use the prop as the starting point
+  });
+
+  const trial = currentTrial || initialTrial;
 
   const handleUploadDocument = () => {
     // Navigate to the document-hub tab with upload parameter
     navigate(`/trials/${trial.id}/document-hub?upload=true`);
+  };
+
+  const archiveTrial = () => {
+
+    const nextStatus = statusTransitions[trial.status]?.nextStatus;
+    if (!nextStatus) return;
+
+    updateTrial.mutate(
+      {
+        trialId: trial.id,
+        updates: { status: nextStatus },
+      },
+      {
+        onSuccess: () => {
+          console.log("Trial status updated to:", nextStatus);
+          toast({
+            title: "Trial paused",
+            description: "The trial status has been successfully updated.",
+            variant: "default",
+          });
+        },
+        onError: (error) => {
+          toast({
+            title: "Error",
+            description: "Failed to pause the trial.",
+            variant: "destructive",
+          });
+        },
+      }
+    );
   };
 
   // Fetch team members to find PI
@@ -64,12 +125,31 @@ export function TrialOverview({ trial }: TrialOverviewProps) {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-1 flex items-center gap-3">
-            {trial.name}
-            {/* <Badge variant="secondary" className="ml-2 text-base">
+          <div className="flex gap-4 space-between items-center mb-2">
+            <h2 className="text-3xl font-bold text-gray-900 mb-1 flex items-center gap-3">
+              {trial.name}
+              <Badge variant="secondary" className="ml-2 text-base">
               {trial.status}
-            </Badge> */}
-          </h2>
+            </Badge>
+            </h2>
+            {statusTransitions[trial.status as TrialStatus]?.nextStatus && (
+              <button
+                type="button"
+                disabled={updateTrial.isPending} // Disable while loading
+                className={`
+                  inline-flex items-center gap-1.5
+                  rounded-md px-3 py-1.5
+                  text-sm font-medium text-white
+                  shadow-sm transition
+                  ${updateTrial.isPending ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}
+                `}
+                onClick={archiveTrial}
+              >
+                {updateTrial.isPending ? "Updating..." : statusTransitions[trial.status as TrialStatus].label}
+              </button>
+            )}
+          </div>
+
           <p className="text-gray-600 max-w-2xl">
             {trial.description || "No description available"}
           </p>

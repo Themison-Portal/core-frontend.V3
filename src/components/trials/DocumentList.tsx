@@ -172,6 +172,11 @@ export function DocumentList({
     },
   });
 
+  const handleDeleteDocument = (documentId: string) => {
+    // Implement delete logic here
+    console.log("Delete document with ID:", documentId);
+  };
+
   // Filter documents by tab
   let filteredDocuments = documents;
   if (activeTab === "Active") {

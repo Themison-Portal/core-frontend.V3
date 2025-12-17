@@ -33,8 +33,8 @@ export function CleanPDFSourceLinkRAG({
   const handleOpenPDF = () => {
     if (onNavigatePDF) {
       // Use the callback to open PDF drawer with highlighting
-      console.log('🔗 Opening PDF drawer for source:', { page: source.page, text: source.exactText?.substring(0, 50) });
-      onNavigatePDF(source.page, source.exactText || '', source.name+'.pdf');
+      console.log("Document URL: ", documentUrl);      
+      onNavigatePDF(source.page, source.exactText || '', documentUrl);
     } else {
       // Fallback to opening in new tab
       const targetUrl = source.highlightURL || (documentUrl ? `${documentUrl}#page=${source.page}` : null);

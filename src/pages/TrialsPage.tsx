@@ -50,7 +50,7 @@ export function TrialsPage() {
     refreshData,
   } = useAppData();
   const trials = metrics?.trials || [];
-
+  console.log("Trials data:", trials);
   const { createTrialMutation } = useOnboardingMutations({
     organizationId,
     memberId,
@@ -139,7 +139,13 @@ export function TrialsPage() {
 
   // Get assigned and other trials
   const assignedTrials = trials.filter((trial) =>
-    isUserAssignedToTrial(trial.id)
+    isUserAssignedToTrial(trial.id) &&
+      trial.status != "paused"
+  );
+  const assignedPausedTrials = trials.filter(
+    (trial) =>
+      isUserAssignedToTrial(trial.id) &&
+      trial.status === "paused"
   );
   const otherTrials = trials.filter(
     (trial) => !isUserAssignedToTrial(trial.id)
@@ -197,16 +203,14 @@ export function TrialsPage() {
       return (
         <Card
           key={trial.id}
-          className={`w-full max-w-sm overflow-hidden hover:shadow-xl hover:translate-y-[-2px] transition-all duration-300 cursor-pointer ${
-            isAssigned ? "ring-2 ring-blue-50" : ""
-          }`}
+          className={`w-full max-w-sm overflow-hidden hover:shadow-xl hover:translate-y-[-2px] transition-all duration-300 cursor-pointer ${isAssigned ? "ring-2 ring-blue-50" : ""
+            }`}
           onClick={() => navigate(`/trials/${trial.id}`)}
         >
           {/* Card Image/Header */}
           <div
-            className={`h-36 ${
-              headerColors[index % headerColors.length]
-            } relative`}
+            className={`h-36 ${headerColors[index % headerColors.length]
+              } relative`}
           >
             {/* Tags in top left */}
             <div className="absolute top-3 left-3 flex flex-wrap gap-1">
@@ -302,11 +306,10 @@ export function TrialsPage() {
                   variant={activeLocation === location ? "default" : "outline"}
                   size="sm"
                   onClick={() => setActiveLocation(location)}
-                  className={`h-7 px-2 text-xs rounded-full ${
-                    activeLocation === location
+                  className={`h-7 px-2 text-xs rounded-full ${activeLocation === location
                       ? "bg-gray-800 hover:bg-gray-700 text-white"
                       : "bg-white hover:bg-gray-50 text-gray-700 border-gray-300"
-                  }`}
+                    }`}
                 >
                   {location}
                 </Button>
@@ -375,7 +378,7 @@ export function TrialsPage() {
             onClick={() => toggleSection("others")}
             className="flex items-center gap-2 text-lg font-semibold text-gray-900"
           >
-            <span>Others ({otherTrials.length})</span>
+            <span>Paused ({assignedPausedTrials.length})</span>
             {expandedSections.includes("others") ? (
               <ChevronUp className="w-5 h-5" />
             ) : (
@@ -386,7 +389,7 @@ export function TrialsPage() {
           {expandedSections.includes("others") && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {renderTrialCards(
-                otherTrials.filter(
+                assignedPausedTrials.filter(
                   (trial) =>
                     (activePhase === "All phases" ||
                       trial.phase === activePhase) &&

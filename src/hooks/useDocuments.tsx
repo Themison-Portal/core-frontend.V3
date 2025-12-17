@@ -86,7 +86,7 @@ export function useUpdateDocument() {
         Pick<TrialDocument, "document_name" | "description" | "tags" | "status">
       >;
     }) => documentService.updateDocument(documentId, updates),
-    onSuccess: (updatedDocument) => {
+    onSuccess: (updatedDocument) => { 
       // Update the cached document
       queryClient.setQueryData(
         DOCUMENTS_QUERY_KEYS.detail(updatedDocument.id),

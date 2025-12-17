@@ -290,6 +290,7 @@ export function DocumentRag({ trial, document_id }: DocumentAIProps) {
         }
 
         const data = await res.json();
+        console.log("RAG response data:", data);
         // Ensure shape
         return {
             response: typeof data.response === "string" ? data.response : "",

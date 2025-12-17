@@ -1,7 +1,7 @@
 import React from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { useAppData } from "@/hooks/useAppData";
-import { AppLayout } from "@/components/layout/AppLayout";            
+import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { TrialSelector } from "@/components/documents/TrialSelector.tsx";
 import { DocumentAssistantTabs } from "@/components/documents/DocumentAssistantTabs";
@@ -9,7 +9,7 @@ import { ActiveDocuments } from "@/components/documents/ActiveDocuments";
 import { DocumentAI } from "@/components/documents/DocumentAI";
 import { QARepository } from "@/components/documents/QARepository";
 import { ChatPDFFallbackProvider } from "@/components/documents/ChatPDFFallbackProvider";
-import { MessageSquare } from "lucide-react";
+import { BookOpen, MessageSquare } from "lucide-react";
 import type { BreadcrumbItem } from "@/components/ui/breadcrumb";
 import { TrialDropdownBreadcrumb } from "@/components/common/breadcrumbs/TrialDropdownBreadcrumb";
 import { DocumentRag } from "@/components/documents/DocumentRag";
@@ -76,7 +76,16 @@ export default function DocumentAssistantPage() {
   if (!selectedTrial) {
     return (
       <AppLayoutNew>
-        <TrialError message="Please choose a trial from dropdown list" />
+        <div className="h-full flex flex-col items-center justify-center text-center px-6">
+          <BookOpen className="w-12 h-12 text-slate-400 mb-4" />
+          <h3 className="text-xl font-semibold text-slate-800">
+            Document AI Assistant
+          </h3>
+          <p className="text-slate-600 mt-2">
+            Select a trial to get started with the Document AI Assistant.
+          </p>
+          
+        </div>
       </AppLayoutNew>
     );
   }
@@ -98,7 +107,7 @@ export default function DocumentAssistantPage() {
   }
 
   return (
-    <AppLayoutNew 
+    <AppLayoutNew
       selectedTrialId={trialId}
       onSelectDocument={(docId) => setSelectedDocumentId(docId)}
     >
