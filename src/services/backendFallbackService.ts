@@ -11,6 +11,8 @@ interface BackendResponse {
     relevance?: string;
     context?: string;
     highlightURL?: string;
+    bboxes?: number[][];
+    name?: string;
   }>;
   source: 'primary' | 'chatpdf' | 'mock';
   timestamp: number;
@@ -79,17 +81,17 @@ class BackendFallbackService {
       };
     } catch (primaryError) {
       console.warn('⚠️ Primary backend failed:', primaryError);
-      
+
       // Check if we should try ChatPDF fallback
       const chatPDFService = getChatPDFService();
       if (chatPDFService && this.shouldUseFallback(primaryError)) {
         console.log('🔄 Attempting ChatPDF fallback');
-        
+
         try {
           return await this.queryWithChatPDF(message, documentId, documentData);
         } catch (fallbackError) {
           console.error('❌ ChatPDF fallback also failed:', fallbackError);
-          
+
           // Both services failed, throw a comprehensive error
           throw this.createFallbackError(primaryError, fallbackError);
         }
@@ -97,6 +99,48 @@ class BackendFallbackService {
 
       // No fallback available or not appropriate, throw original error
       throw this.createBackendError(primaryError, 'primary');
+    }
+  }
+
+  /**
+ * Fetches a highlighted PDF blob using authenticated request
+ * Mirrors the company's standard queryPrimaryBackend pattern
+ */
+  async getHighlightedPdfBlob(options: {
+    documentUrl: string;
+    page: number;
+    bboxes?: number[][];
+    token: string; // Renamed for clarity, used as Bearer token
+    searchText?: string;
+    timeout?: number;
+  }): Promise<string> {
+    const { documentUrl, page, bboxes, token, searchText, timeout = 30000 } = options;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      const encodedDoc = encodeURIComponent(documentUrl);
+      const bboxesStr = bboxes && bboxes.length > 0
+        ? encodeURIComponent(JSON.stringify(bboxes))
+        : '';
+      const apiUrl = `${this.primaryBackendUrl}/query/highlighted-pdf?doc=${encodedDoc}&page=${page}&searchText=${searchText}&bboxes=${bboxesStr}`;
+
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`, // Pass the JWT session token
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      if (!response.ok) throw new Error(`Status: ${response.status}`);
+
+      const pdfBlob = await response.blob();
+      return URL.createObjectURL(pdfBlob);
+    } catch (error) {
+      clearTimeout(timeoutId);
+      throw error;
     }
   }
 
@@ -162,8 +206,8 @@ class BackendFallbackService {
    * Query using ChatPDF fallback
    */
   private async queryWithChatPDF(
-    message: string, 
-    documentId: string, 
+    message: string,
+    documentId: string,
     documentData?: any
   ): Promise<BackendResponse> {
     const chatPDFService = getChatPDFService();
@@ -194,6 +238,8 @@ class BackendFallbackService {
         documentInfo: documentInfo,
       });
 
+
+
       // Transform response format - prefer enhanced sources over basic references
       const sources = chatPDFResponse.sources?.map(source => ({
         section: source.section || `Page ${source.page}`,
@@ -202,7 +248,11 @@ class BackendFallbackService {
         exactText: source.exactText,
         context: source.context,
         relevance: source.relevance,
-        highlightURL: source.highlightURL
+        highlightURL: source.highlightURL,
+        bboxes: Array.isArray(source.bboxes) && source.bboxes.length > 0
+          ? source.bboxes
+          : undefined,
+        name: source.name ?? 'Unknown',
       })) || chatPDFResponse.references?.map(ref => {
         // Generate highlighting URL for basic references when enhanced sources fail
         const highlightURL = documentInfo?.url
@@ -267,7 +317,7 @@ class BackendFallbackService {
    */
   private createBackendError(error: unknown, source: 'primary' | 'chatpdf'): BackendError {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
+
     return {
       error: errorMessage,
       source,
@@ -282,7 +332,7 @@ class BackendFallbackService {
   private createFallbackError(primaryError: unknown, fallbackError: unknown): BackendError {
     const primaryMsg = primaryError instanceof Error ? primaryError.message : 'Primary backend failed';
     const fallbackMsg = fallbackError instanceof Error ? fallbackError.message : 'ChatPDF fallback failed';
-    
+
     return {
       error: `Both services failed. Primary: ${primaryMsg}. Fallback: ${fallbackMsg}`,
       source: 'primary' as const,
@@ -342,6 +392,8 @@ export function getBackendFallbackService(): BackendFallbackService {
   }
   return backendFallbackService;
 }
+
+
 
 export default BackendFallbackService;
 export type { BackendResponse, BackendError, QueryOptions };

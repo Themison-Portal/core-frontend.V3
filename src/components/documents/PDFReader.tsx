@@ -17,6 +17,7 @@ interface PDFReaderProps {
   fileName?: string;
   highlightedPage?: number; // Page to scroll to and highlight
   searchText?: string; // Text to search and highlight
+  bboxes?: number[][]; // Bounding boxes for highlighting
 }
 
 export function PDFReader({
@@ -24,6 +25,7 @@ export function PDFReader({
   fileName = "Document",
   highlightedPage,
   searchText,
+  bboxes
 }: PDFReaderProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);

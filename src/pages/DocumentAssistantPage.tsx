@@ -124,7 +124,7 @@ export default function DocumentAssistantPage() {
             <DocumentAssistantContent
               trial={selectedTrial}
               currentTab={currentTab}
-              document_id={selectedDocumentId}
+              documentId={selectedDocumentId}
             />
           </ChatPDFFallbackProvider>
         </div>
@@ -154,7 +154,7 @@ function TrialError({ message }: { message: string }) {
 // Content router component
 function DocumentAssistantContent({
   trial,
-  document_id,
+  documentId,
   currentTab,
 }: {
   trial: {
@@ -162,7 +162,7 @@ function DocumentAssistantContent({
     name: string;
   };
   currentTab: string;
-  document_id?: string;
+  documentId?: string;
 }) {
   switch (currentTab) {
     case "document-ai":
@@ -172,7 +172,7 @@ function DocumentAssistantContent({
     case "qa-repository":
       return <QARepository trial={trial} />;
     case "rag":
-      return <DocumentRag trial={trial} document_id={document_id} />;
+      return <DocumentRag trial={trial} documentId={documentId} />;
     case "rag-biobert":
       return <DocumentRagBioBERT trial={trial} />;
     default:

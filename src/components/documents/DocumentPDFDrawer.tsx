@@ -16,6 +16,7 @@ interface DocumentPDFDrawerProps {
   documentName: string;
   highlightedPage?: number;
   searchText?: string;
+  bboxes?: number[][]; // Bounding boxes for highlighting
 }
 
 export function DocumentPDFDrawer({
@@ -25,6 +26,7 @@ export function DocumentPDFDrawer({
   documentName,
   highlightedPage,
   searchText,
+  bboxes
 }: DocumentPDFDrawerProps) {
   console.log('📄 Opening PDF Drawer:', { documentUrl });
   return (
@@ -48,6 +50,7 @@ export function DocumentPDFDrawer({
             fileName={documentName}
             highlightedPage={highlightedPage}
             searchText={searchText}
+            bboxes={bboxes}
           />
         </div>
       </SheetContent>

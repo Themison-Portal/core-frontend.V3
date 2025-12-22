@@ -11,6 +11,7 @@ interface PDFSource {
   relevance?: 'high' | 'medium' | 'low';
   context?: string;
   highlightURL?: string;
+  bboxes?: [number, number, number, number][]; // Array of bounding boxes
 }
 
 interface CleanPDFSourceLinkProps {
@@ -18,7 +19,7 @@ interface CleanPDFSourceLinkProps {
   documentUrl?: string;
   documentName?: string;
   className?: string;
-  onNavigatePDF?: (page: number, searchText: string, sourceName?: string) => void;
+  onNavigatePDF?: (page: number, searchText: string, sourceName?: string, bboxes?: [number, number, number, number][]) => void;
 }
 
 export function CleanPDFSourceLinkRAG({
@@ -34,7 +35,7 @@ export function CleanPDFSourceLinkRAG({
     if (onNavigatePDF) {
       // Use the callback to open PDF drawer with highlighting
       console.log("Document URL: ", documentUrl);      
-      onNavigatePDF(source.page, source.exactText || '', documentUrl);
+      onNavigatePDF(source.page, source.exactText || '', documentUrl, source.bboxes);
     } else {
       // Fallback to opening in new tab
       const targetUrl = source.highlightURL || (documentUrl ? `${documentUrl}#page=${source.page}` : null);
@@ -43,7 +44,7 @@ export function CleanPDFSourceLinkRAG({
       }
     }
   };
-
+  console.log("Rendering source: ", source);
   const getRelevanceBadgeVariant = (relevance?: string) => {
     switch (relevance) {
       case 'high': return 'default';
@@ -108,7 +109,7 @@ interface CleanPDFSourcesPanelProps {
   documentUrl?: string;
   documentName?: string;
   className?: string;
-  onNavigatePDF?: (page: number, searchText: string, sourceName?: string) => void;
+  onNavigatePDF?: (page: number, searchText: string, sourceName?: string, bboxes?: [number, number, number, number][]) => void;
 }
 
 export function CleanPDFSourcesPanelRAG({
@@ -157,12 +158,13 @@ export function CleanPDFSourcesPanelRAG({
             key={`${source.page}-${source.exactText?.substring(0, 50)}-${idx}`}
             source={{
               page: source.page,
-              name: source.filename || '',
+              name: source.name || '',
               section: source.section,
               exactText: source.exactText || source.content,
               relevance: source.relevance,
               context: source.context,
-              highlightURL: source.highlightURL
+              highlightURL: source.highlightURL,
+              bboxes: source.bboxes
             }}
             // documentUrl={documentUrl}
             documentUrl={source.filename ? documentUrl : documentUrl}

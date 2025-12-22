@@ -17,6 +17,9 @@ interface ChatPDFQueryResponse {
     exactText: string;
     relevance: 'high' | 'medium' | 'low';
     context: string;
+    highlightURL?: string;
+    bboxes?: number[][];
+    name?: string;
   }>;
 }
 
@@ -194,7 +197,10 @@ Format your response using clear markdown structure:
             section: `Page ${ref.pageNumber}`,
             exactText: `Content from page ${ref.pageNumber}`,
             relevance: 'medium' as const,
-            context: 'Basic page reference from ChatPDF'
+            context: 'Basic page reference from ChatPDF',
+            highlightURL: options?.documentInfo?.url,
+            name: ref.name || options?.documentInfo?.name,
+            bboxes: ref.bboxes || undefined,
           }));
         }
       }

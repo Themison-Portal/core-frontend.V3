@@ -39,6 +39,7 @@ import { getClaudeCitationsService } from "@/services/claudeCitationsService";
 import { CleanPDFSourcesPanel } from "./CleanPDFSourceLink";
 import { PDFTestButton } from "./PDFTestButton";
 import { CleanPDFSourcesPanelRAG } from "./CleanPDFSourceLinkRAG";
+import { toast } from "@/hooks/use-toast";
 
 type RagResponse = {
     response: string;
@@ -51,7 +52,7 @@ interface DocumentAIProps {
         id: string;
         name: string;
     };
-    document_id?: string;
+    documentId?: string;
 }
 
 interface ChatMessage {
@@ -68,6 +69,8 @@ interface ChatMessage {
         highlightURL?: string;
         filename?: string;
         chunk_index?: number;
+        name?: string;
+        bboxes?: [number, number, number, number][];
     }>;
     downloadableTemplates?: Array<{
         title: string;
@@ -85,14 +88,14 @@ interface ChatMessage {
     streamedContent?: string;
 }
 
-export function DocumentRag({ trial, document_id }: DocumentAIProps) {
+export function DocumentRag({ trial, documentId }: DocumentAIProps) {
     const location = useLocation();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const [query, setQuery] = useState("");
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const [documentId, setDocumentId] = useState<string | null>(null);
+
     const [chat, setChat] = useState<ChatMessage[]>([]);
     const [pdfUrl, setPdfUrl] = useState<string>('');
     const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
@@ -119,6 +122,7 @@ export function DocumentRag({ trial, document_id }: DocumentAIProps) {
     const [showPDFDrawer, setShowPDFDrawer] = useState(false);
     const [pdfHighlightPage, setPdfHighlightPage] = useState<number | undefined>();
     const [pdfSearchText, setPdfSearchText] = useState<string | undefined>();
+    const [pdfDocumentName, setPdfDocumentName] = useState<string>("Document");
 
     // AI Service selector
     const [selectedAIService, setSelectedAIService] = useState<'backend' | 'chatpdf' | 'anthropic' | 'anthropic-mockup'>('backend');
@@ -159,11 +163,11 @@ export function DocumentRag({ trial, document_id }: DocumentAIProps) {
     const BACKEND_URL = import.meta.env.VITE_API_BASE_URL;
 
     // Parse documentId from URL or use latest protocol as default
-    useEffect(() => {
-        const params = new URLSearchParams(location.search);
-        const docId = params.get("documentId");
-        setDocumentId(docId || latestProtocol?.id || null);
-    }, [location.search, latestProtocol]);
+    // useEffect(() => {
+    //     const params = new URLSearchParams(location.search);
+    //     const docId = params.get("documentId");
+    //     setDocumentId(docId || latestProtocol?.id || null);
+    // }, [location.search, latestProtocol]);
 
     // Fetch document data
     const {
@@ -229,7 +233,6 @@ export function DocumentRag({ trial, document_id }: DocumentAIProps) {
         if (!query.trim() || !documentId) return;
 
         const userMessage = query.trim();
-
         const userMsg: ChatMessage = {
             id: `${Date.now()}-user`,
             role: "user",
@@ -241,20 +244,77 @@ export function DocumentRag({ trial, document_id }: DocumentAIProps) {
         setIsLoading(true);
         setLoadingMessage("Reading document..."); // Reset to first message
 
+        // Create session if this is the first message
+        let sessionId = currentSessionId;
+        if (!sessionId) {
+            try {
+                const { sessionId: newSessionId } = await createSessionWithMessage(
+                    trial.id,
+                    documentId,
+                    userMessage
+                );
+                sessionId = newSessionId;
+                setCurrentSessionId(newSessionId);
 
+                // Update URL with new sessionId
+                // navigate(`/document-assistant/${trial.id}/rag?sessionId=${newSessionId}`, {
+                //     replace: true
+                // });
+                const newUrl = `${window.location.pathname}?sessionId=${newSessionId}`;
+                window.history.replaceState({ ...window.history.state }, '', newUrl);
+            } catch (error) {
+                console.error("Failed to create session:", error);
+                // Continue anyway - don't block the user
+            }
+        } else {
+            // Save user message to existing session
+            try {
+                await addMessageAsync({
+                    sessionId,
+                    role: "user",
+                    content: userMessage,
+                });
+            } catch (error) {
+                console.error("Failed to save user message:", error);
+                // Continue anyway
+            }
+        }
 
         try {
+            const useMockAI = import.meta.env.VITE_USE_MOCK_AI === "true";
 
-            const data = await callRag(userMessage);
+            if (useMockAI) {
+                // Use mock AI service for demo
+                console.log("🤖 Using Mock AI Service for demo");
 
-            const botMsg: ChatMessage = {
-                id: `${Date.now()}-llm`,
-                role: "llm",
-                content: data.response,  // must be string
-                sources: data.sources ?? [],
-                tool_calls: data.tool_calls ?? [],
-            };
-            setChat(prev => [...prev, botMsg]);
+                // Simulate API delay for realism
+                await new Promise((resolve) =>
+                    setTimeout(resolve, 1500 + Math.random() * 1000)
+                );
+
+                const mockResponse = getMockResponse(userMessage, documentId);
+                const responseId = `${Date.now()}-llm`;
+
+                // Add initial streaming message WITHOUT sources/actions
+                setChat((prev) => [
+                    ...prev,
+                    {
+                        id: responseId,
+                        role: "llm",
+                        content: "",
+                        streamedContent: "",
+                        isStreaming: true,
+                    },
+                ]);
+
+                // Start streaming the response
+                setStreamingMessageId(responseId);
+                await streamResponse(mockResponse.response, responseId, mockResponse);
+            } else {
+                // Use backend with ChatPDF fallback (with selected service)
+                console.log("🤖 Using RAG Service:", selectedAIService);
+                await handleBackendWithFallback(userMessage, documentId, selectedAIService, sessionId);
+            }
         } catch (error) {
             console.error("Error with query:", error);
             setChat((prev) => [
@@ -270,16 +330,82 @@ export function DocumentRag({ trial, document_id }: DocumentAIProps) {
             setIsLoading(false);
         }
     };
+    // const handleSend = async (e: React.FormEvent) => {
+    //     e.preventDefault();
+    //     if (!query.trim()) {
+    //         toast({
+    //             title: "Empty question",
+    //             description: "Please type a question before sending.",
+    //         });
+    //         return;
+    //     }
+
+    //     if (!documentId) {
+    //         toast({
+    //             title: "Document not selected",
+    //             description: "Please select a document to ask questions about.",
+    //         });
+    //         return;
+    //     }
+
+    //     const userMessage = query.trim();
+
+    //     const userMsg: ChatMessage = {
+    //         id: `${Date.now()}-user`,
+    //         role: "user",
+    //         content: userMessage,
+    //     };
+
+    //     setChat((prev) => [...prev, userMsg]);
+    //     setQuery("");
+    //     setIsLoading(true);
+    //     setLoadingMessage("Reading document..."); // Reset to first message
+
+
+
+    //     try {
+
+    //         const data = await callRag(userMessage);
+
+    //         const botMsg: ChatMessage = {
+    //             id: `${Date.now()}-llm`,
+    //             role: "llm",
+    //             content: data.response,  // must be string
+    //             sources: data.sources ?? [],
+    //             tool_calls: data.tool_calls ?? [],
+    //         };
+    //         setChat(prev => [...prev, botMsg]);
+    //     } catch (error) {
+    //         console.error("Error with query:", error);
+    //         setChat((prev) => [
+    //             ...prev,
+    //             {
+    //                 id: `${Date.now()}-llm`,
+    //                 role: "llm",
+    //                 content:
+    //                     "Sorry, I'm having trouble connecting to the AI service right now. Please try again.",
+    //             },
+    //         ]);
+    //     } finally {
+    //         setIsLoading(false);
+    //     }
+    // };
 
     const callRag = async (query: string): Promise<RagResponse> => {
 
         const fd = new FormData();
         fd.append("query", query);
-        if (document_id) {
-            console.log('document_id: ', document_id)
-            fd.append("document_id", document_id);
+        if (!documentId) {
+            console.warn("No document_id – skipping RAG query");
+            toast({
+                title: "Document not selected",
+                description: "Please select a document to ask questions about.",
+                variant: "default",
+            });
+            throw new Error("No document selected");
         }
-        const res = await fetch(`${BACKEND_URL}/rag/query-docling`, {
+        fd.append("document_id", documentId);
+        const res = await fetch(`${BACKEND_URL}/query`, {
             method: "POST",
             body: fd,
         });
@@ -431,6 +557,8 @@ export function DocumentRag({ trial, document_id }: DocumentAIProps) {
             relevance?: 'high' | 'medium' | 'low';
             context?: string;
             highlightURL?: string;
+            name?: string;
+            bboxes?: number[][];
         }>
     ) => {
         try {
@@ -472,14 +600,15 @@ export function DocumentRag({ trial, document_id }: DocumentAIProps) {
                 limit: 5
             }, serviceType);
 
-            console.log(`✅ Query successful via ${result.source}:`, result);
+            console.log(`✅ Query successful via RAG ${result.source}:`, result);
+
             if (result.cost) {
                 console.log(`💰 Cost: $${result.cost.toFixed(4)} (${result.model})`);
             }
 
             // Sources are already in unified format from the adapter
             const formattedSources = result.sources;
-
+            console.log('Formatted sources:', formattedSources);
             // Add the response to chat
             const responseId = `${Date.now()}-llm`;
             setChat((prev) => [
@@ -559,6 +688,10 @@ export function DocumentRag({ trial, document_id }: DocumentAIProps) {
                             relevance: source.relevance || 'medium',
                             context: source.context,
                             highlightURL: source.highlightURL,
+                            bboxes: Array.isArray(source.bboxes) && source.bboxes.length > 0
+                                ? source.bboxes
+                                : undefined,
+                            name: source.name || source.filename || 'Unknown Document',
                         })),
                     },
                 ]);
@@ -642,7 +775,7 @@ export function DocumentRag({ trial, document_id }: DocumentAIProps) {
         documentSelector = (
             <Select
                 value={documentId || ""}
-                onValueChange={(value) => setDocumentId(value)}
+            // onValueChange={(value) => setDocumentId(value)}
             >
                 <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a document..." />
@@ -774,13 +907,52 @@ export function DocumentRag({ trial, document_id }: DocumentAIProps) {
                                                         sources={msg.sources}
                                                         documentUrl={document?.document_url || document?.file_url}
                                                         documentName={document?.document_name || 'Protocol Document'}
-                                                        onNavigatePDF={(page, searchText, sourceName) => {
-                                                            const fileUrl = `${BACKEND_URL}/rag/highlighted_pdf?doc=${encodeURIComponent(sourceName)}&page=${page}&highlight=${encodeURIComponent(searchText)}`;
-                                                            setPdfUrl(fileUrl);
-                                                            setPdfHighlightPage(page);
-                                                            setPdfSearchText(searchText);
-                                                            setShowPDFDrawer(true);
+                                                        onNavigatePDF={async (page, searchText, sourceName, bboxes) => {
+                                                            const documentUrl = document?.document_url || document?.file_url || '';
+                                                            try {
+                                                                // 1. Get the current session to get the JWT token
+                                                                const { data: { session } } = await supabase.auth.getSession();
+                                                                const token = session?.access_token;
+
+                                                                if (!token) {
+                                                                    toast({
+                                                                        title: "Authentication required",
+                                                                        description: "Please sign in again to view document highlights.",
+                                                                        variant: "destructive",
+                                                                    });
+                                                                    return;
+                                                                }
+
+                                                                // 2. Get the service
+                                                                const backendService = getBackendFallbackService();
+
+
+
+                                                                // 3. Request the authenticated Blob URL
+                                                                const blobUrl = await backendService.getHighlightedPdfBlob({
+                                                                    documentUrl: document?.file_url || document?.document_url || '',
+                                                                    page: page,
+                                                                    bboxes: bboxes,
+                                                                    searchText: searchText,
+                                                                    token: token, // Using the token here
+                                                                });
+                                                                // const fileUrl = `${this.primaryBackendUrl}/query/highlighted-pdf?doc=${encodedDoc}&page=${page}&bbox=${bboxStr}`;
+                                                                // const fileUrl = `${BACKEND_URL}/rag/highlighted_pdf?doc=${encodeURIComponent(sourceName)}&bbox=${encodeURIComponent(bbox?.join(','))}&page=${page}&highlight=${encodeURIComponent(searchText)}`;
+                                                                setPdfUrl(blobUrl);
+                                                                setPdfHighlightPage(page);
+                                                                setPdfSearchText(searchText);
+                                                                setShowPDFDrawer(true);
+                                                            } catch (error) {
+                                                                console.error("Error navigating to PDF highlight:", error);
+                                                                toast({
+                                                                    title: "Error",
+                                                                    description: "Failed to navigate to document highlight.",
+                                                                    variant: "destructive",
+                                                                });
+                                                            }
                                                         }}
+
+
                                                     />
                                                 </>
                                             )}

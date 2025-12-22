@@ -8,6 +8,8 @@ export interface UnifiedSource {
   relevance: 'high' | 'medium' | 'low';
   context: string;
   highlightURL: string;
+  bboxes?: [number, number, number, number][];
+  name?: string;
 }
 
 export interface UnifiedAIResponse {
@@ -31,7 +33,11 @@ export function adaptBackendResponse(backendResponse: any): UnifiedAIResponse {
       exactText: source.exactText || source.content || '',
       relevance: source.relevance || 'medium',
       context: source.context || 'Context from backend analysis',
-      highlightURL: source.highlightURL || ''
+      highlightURL: source.highlightURL || '',
+      bboxes: Array.isArray(source.bboxes) && source.bboxes.length > 0
+        ? source.bboxes
+        : undefined,
+      name: source.name ?? 'Unknown',
     })),
     source: backendResponse.source || 'backend',
     timestamp: backendResponse.timestamp || Date.now(),
