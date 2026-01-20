@@ -6,7 +6,7 @@ import { ChatInput } from "./ChatInput";
 import { ArtifactRenderer } from "./ArtifactRenderer";
 import { useAppData } from "@/hooks/useAppData";
 import { useChatHistory } from "@/hooks/useChatHistory";
-import { Groq } from "groq-sdk";
+import OpenAI from "openai";
 import { supabase } from "@/integrations/supabase/client";
 import type { ChatMessage, ChatSession } from "./types";
 
@@ -30,8 +30,8 @@ export function ChatContainer({ organizationId, stats }: ChatContainerProps) {
     getSessionMessages,
   } = useChatHistory();
 
-  const groq = new Groq({
-    apiKey: import.meta.env.VITE_GROQ_API_KEY,
+  const openai = new OpenAI({
+    apiKey: import.meta.env.VITE_OPENAI_API_KEY,
     dangerouslyAllowBrowser: true,
   });
 
@@ -272,16 +272,16 @@ Executive: "## Executive Summary\nKey findings: [summary]\n## Detailed Analysis\
 
 Always match your response style to the complexity and audience level of the question.`;
 
-      const chatCompletion = await groq.chat.completions.create({
+      const chatCompletion = await openai.chat.completions.create({
         messages: [
           { role: "system", content: contextPrompt },
           ...newMessages
             .slice(-5)
             .map((msg) => ({ role: msg.role, content: msg.content })), // Keep last 5 messages for context, strip extra properties
         ],
-        model: "llama-3.3-70b-versatile",
+        model: "gpt-4o-mini",
         temperature: 0.7,
-        max_completion_tokens: 512,
+        max_tokens: 512,
         top_p: 1,
         stream: true,
       });
@@ -323,7 +323,7 @@ Always match your response style to the complexity and audience level of the que
         }
       }
     } catch (error) {
-      console.error("Error with Groq chat:", error);
+      console.error("Error with OpenAI chat:", error);
       setMessages((prev) => [
         ...prev,
         {
