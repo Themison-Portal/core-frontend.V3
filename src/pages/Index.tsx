@@ -101,22 +101,7 @@ const Index = () => {
           ))}
         </div>
 
-        {/* CTA Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Ready to get started?
-          </h2>
-          <p className="text-lg text-gray-600 mb-6">
-            Join the organizations that trust THEMISON for their clinical trials.
-          </p>
-          <Button 
-            size="lg" 
-            className="bg-blue-600 hover:bg-blue-700"
-            onClick={() => navigate('/auth/sign-up')}
-          >
-            Create Free Account
-          </Button>
-        </div>
+        
       </main>
 
       {/* Footer */}
