@@ -1,7 +1,5 @@
 # Themison Clinical Trials Management Platform
 
-A comprehensive multi-tenant SaaS platform for managing clinical trials, built for hospitals and medical research institutions.
-
 ## 🏥 What is Themison?
 
 Themison is a clinical trial management system that enables organizations to:
